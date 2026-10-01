@@ -1,0 +1,86 @@
+schema_version: "2.0"
+
+repo:
+  name: project4-hypothesis
+  primary_language: python
+
+env:
+  base: python
+  python_version: "3.10"
+  requirements_file: requirements.txt
+  os_packages: []
+
+# DB-backed (Tier 3): credentials injected as env vars into the data_collection
+# step. No secrets are committed. Every id in used_by must exist in steps[].id.
+secrets:
+  - key: HOST
+    purpose: Database host
+    used_by: [data_collection, fundamentals]
+  - key: PORT
+    purpose: Database port
+    used_by: [data_collection, fundamentals]
+  - key: DATABASE
+    purpose: Database name
+    used_by: [data_collection, fundamentals]
+  - key: USER_DB
+    purpose: Database user
+    used_by: [data_collection, fundamentals]
+  - key: PASSWORD
+    purpose: Database password
+    used_by: [data_collection, fundamentals]
+
+data_sources:
+  raw: []
+  processed: []
+
+steps:
+  - id: data_collection
+    nine_step: step_2_data_collection
+    required: true
+    label: "Download the daily split-adjusted close + volume panel for the broad VN stock universe"
+    command: "python scripts/download_data.py --query-file sql/query_daily_panel.sql --output data/raw/vn_daily_panel.parquet"
+    network: bridge            # DB connection needs outbound network
+    verification_mode: execute
+    timeout_seconds: 7200
+    inputs: []
+    outputs:
+      - data/raw/vn_daily_panel.parquet
+    depends_on: []
+
+  - id: fundamentals
+    nine_step: step_2_data_collection
+    required: false
+    label: "Download quarterly revenue / net-profit line items for the fundamental sanity check"
+    command: "python scripts/download_data.py --query-file sql/fundamentals.sql --output data/raw/vn_fundamentals.parquet"
+    network: bridge
+    verification_mode: execute
+    timeout_seconds: 3600
+    inputs: []
+    outputs:
+      - data/raw/vn_fundamentals.parquet
+    depends_on: []
+
+  - id: pairs_screen
+    nine_step: step_5_optimization
+    required: true
+    label: "Screen pairs: correlation -> cointegration -> half-life -> OOS stability -> z-score backtest, with a Benjamini-Hochberg haircut"
+    command: "python scripts/pairs_screen.py --input data/raw/vn_daily_panel.parquet --outdir result/pairs"
+    network: none
+    verification_mode: execute
+    timeout_seconds: 7200
+    inputs:
+      - data/raw/vn_daily_panel.parquet
+    outputs:
+      - result/pairs/pairs_metrics.csv
+      - result/pairs/selected_pairs.csv
+      - result/pairs/FINDINGS.md
+    depends_on: [data_collection]
+
+nine_step_coverage:
+  step_1_hypothesis:       {present: true,  section: "Hypothesis"}
+  step_2_data_collection:  {present: true,  section: "Pipeline"}
+  step_3_data_processing:  {present: true,  section: "Pipeline"}
+  step_4_in_sample:        {present: true,  section: "Formation window (in-sample)"}
+  step_5_optimization:     {present: true,  section: "The screen"}
+  step_6_out_of_sample:    {present: true,  section: "Out-of-sample stability"}
+  step_7_paper_trading:    {present: false, section: null}

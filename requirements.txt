@@ -1,0 +1,8 @@
+polars==1.42.1
+connectorx>=0.3.2
+pyarrow>=17            # connectorx -> polars bridge for read_database_uri
+matplotlib==3.8.0
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+statsmodels>=0.14

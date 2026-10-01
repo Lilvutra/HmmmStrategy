@@ -1,0 +1,11 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# Downloaded data is re-fetchable via the data_collection step; don't commit it.
+/data/raw/*
+!/data/raw/.gitkeep
+
+# Local secrets — never commit
+.env
