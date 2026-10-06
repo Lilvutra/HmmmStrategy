@@ -1,4 +1,4 @@
-# project4 — pairs trading: do VN equity spreads actually mean-revert?
+# Pairs trading: do VN equity spreads actually mean-revert?
 
 A plutus-style quant hypothesis project, DB-backed. It moves off project3's single-name
 intraday grid and onto **relative value**: long the cheap leg, short the rich leg of two
